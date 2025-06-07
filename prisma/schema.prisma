@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  approved      Boolean  @default(false)
+  blocked       Boolean  @default(false)
+  loginAttempts Int      @default(0)
+  lockedUntil   DateTime?
+  lastLogin     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  roles    UserRole[]
+  sessions Session[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model AccessList {
+  id       String @id @default(cuid())
+  type     String // "ip" | "email" | "domain"
+  value    String
+  listType String // "whitelist" | "blacklist"
+  reason   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, value, listType])
+  @@map("access_lists")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  userId    String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model RateLimitLog {
+  id        String   @id @default(cuid())
+  key       String
+  ipAddress String
+  action    String
+  createdAt DateTime @default(now())
+
+  @@map("rate_limit_logs")
+}
+
+model AppSettings {
+  id                String   @id @default(cuid())
+  siteName          String   @default("QiangNet")
+  siteDescription   String   @default("Tu centro de entretenimiento personal")
+  logoUrl           String?
+  bgImage           String?
+  heroTitle         String   @default("Tu Centro de Entretenimiento Personal")
+  heroSubtitle      String   @default("Accede a tu contenido multimedia favorito de forma segura y privada desde cualquier dispositivo")
+  theme             Json?
+  allowRegistration Boolean  @default(true)
+  requireApproval   Boolean  @default(true)
+  mainServices      Json?
+  additionalServices Json?
+  animations        Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("app_settings")
+}

@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: qiangnet-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=qiangnet_db
+      - DB_USER=qiangnet_admin
+      - DB_PASSWORD=QiangNet2024_DB_SecurePass!
+      - JWT_SECRET=qiangnet_super_secret_key_change_in_production_32_chars_minimum
+      - JWT_EXPIRES_IN=24h
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - ENCRYPTION_KEY=qiangnet_encryption_key_32_chars_min
+      - FRONTEND_URL=http://localhost:3000
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - qiangnet-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: qiangnet-postgres
+    environment:
+      - POSTGRES_DB=qiangnet_db
+      - POSTGRES_USER=qiangnet_admin
+      - POSTGRES_PASSWORD=QiangNet2024_DB_SecurePass!
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qiangnet-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qiangnet_admin -d qiangnet_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer
+    container_name: qiangnet-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - qiangnet-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  qiangnet-network:
+    driver: bridge
